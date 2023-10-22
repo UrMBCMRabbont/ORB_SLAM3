@@ -529,49 +529,49 @@ namespace ORB_SLAM3 {
     ostream &operator<<(std::ostream& output, const Settings& settings){
         output << "SLAM settings: " << endl;
 
-        output << "\t-Camera 1 parameters (";
-        if(settings.cameraType_ == Settings::PinHole || settings.cameraType_ ==  Settings::Rectified){
-            output << "Pinhole";
-        }
-        else{
-            output << "Kannala-Brandt";
-        }
-        output << ")" << ": [";
-        for(size_t i = 0; i < settings.originalCalib1_->size(); i++){
-            output << " " << settings.originalCalib1_->getParameter(i);
-        }
-        output << " ]" << endl;
+        // output << "\t-Camera 1 parameters (";
+        // if(settings.cameraType_ == Settings::PinHole || settings.cameraType_ ==  Settings::Rectified){
+        //     output << "Pinhole";
+        // }
+        // else{
+        //     output << "Kannala-Brandt";
+        // }
+        // output << ")" << ": [";
+        // for(size_t i = 0; i < settings.originalCalib1_->size(); i++){
+        //     output << " " << settings.originalCalib1_->getParameter(i);
+        // }
+        // output << " ]" << endl;
 
-        if(!settings.vPinHoleDistorsion1_.empty()){
-            output << "\t-Camera 1 distortion parameters: [ ";
-            for(float d : settings.vPinHoleDistorsion1_){
-                output << " " << d;
-            }
-            output << " ]" << endl;
-        }
+        // if(!settings.vPinHoleDistorsion1_.empty()){
+        //     output << "\t-Camera 1 distortion parameters: [ ";
+        //     for(float d : settings.vPinHoleDistorsion1_){
+        //         output << " " << d;
+        //     }
+        //     output << " ]" << endl;
+        // }
 
-        if(settings.sensor_ == System::STEREO || settings.sensor_ == System::IMU_STEREO){
-            output << "\t-Camera 2 parameters (";
-            if(settings.cameraType_ == Settings::PinHole || settings.cameraType_ ==  Settings::Rectified){
-                output << "Pinhole";
-            }
-            else{
-                output << "Kannala-Brandt";
-            }
-            output << "" << ": [";
-            for(size_t i = 0; i < settings.originalCalib2_->size(); i++){
-                output << " " << settings.originalCalib2_->getParameter(i);
-            }
-            output << " ]" << endl;
+        // if(settings.sensor_ == System::STEREO || settings.sensor_ == System::IMU_STEREO){
+        //     output << "\t-Camera 2 parameters (";
+        //     if(settings.cameraType_ == Settings::PinHole || settings.cameraType_ ==  Settings::Rectified){
+        //         output << "Pinhole";
+        //     }
+        //     else{
+        //         output << "Kannala-Brandt";
+        //     }
+        //     output << "" << ": [";
+        //     for(size_t i = 0; i < settings.originalCalib2_->size(); i++){
+        //         output << " " << settings.originalCalib2_->getParameter(i);
+        //     }
+        //     output << " ]" << endl;
 
-            if(!settings.vPinHoleDistorsion2_.empty()){
-                output << "\t-Camera 2 distortion parameters: [ ";
-                for(float d : settings.vPinHoleDistorsion2_){
-                    output << " " << d;
-                }
-                output << " ]" << endl;
-            }
-        }
+        //     if(!settings.vPinHoleDistorsion2_.empty()){
+        //         output << "\t-Camera 2 distortion parameters: [ ";
+        //         for(float d : settings.vPinHoleDistorsion2_){
+        //             output << " " << d;
+        //         }
+        //         output << " ]" << endl;
+        //     }
+        // }
 
         output << "\t-Original image size: [ " << settings.originalImSize_.width << " , " << settings.originalImSize_.height << " ]" << endl;
         output << "\t-Current image size: [ " << settings.newImSize_.width << " , " << settings.newImSize_.height << " ]" << endl;

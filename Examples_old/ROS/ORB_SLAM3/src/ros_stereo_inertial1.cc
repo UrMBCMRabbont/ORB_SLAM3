@@ -24,7 +24,6 @@
 #include<queue>
 #include<thread>
 #include<mutex>
-
 #include "SlamData.h"
 #include<ros/ros.h>
 #include<cv_bridge/cv_bridge.h>
@@ -50,18 +49,19 @@ public:
 class ImageGrabber
 {
 public:
-    ImageGrabber(ORB_SLAM3::System* pSLAM, ORB_SLAM3::SlamData* pSLAMDATA, ImuGrabber *pImuGb, const bool bRect, const bool bClahe): mpSLAM(pSLAM), mpSLAMDATA(pSLAMDATA), mpImuGb(pImuGb), do_rectify(bRect), mbClahe(bClahe){}
+    //ImageGrabber(ORB_SLAM3::System* pSLAM, ImuGrabber *pImuGb, const bool bRect, const bool bClahe, ORB_SLAM3::SlamData* pSLAMDATA): mpSLAM(pSLAM), mpImuGb(pImuGb), do_rectify(bRect), mbClahe(bClahe),mpSLAMDATA(pSLAMDATA) {}
+    ImageGrabber(ORB_SLAM3::System* pSLAM, ImuGrabber *pImuGb, const bool bRect, const bool bClahe): mpSLAM(pSLAM), mpImuGb(pImuGb), do_rectify(bRect), mbClahe(bClahe) {}
 
     void GrabImageLeft(const sensor_msgs::ImageConstPtr& msg);
     void GrabImageRight(const sensor_msgs::ImageConstPtr& msg);
     cv::Mat GetImage(const sensor_msgs::ImageConstPtr &img_msg);
     void SyncWithImu();
-    
-    ORB_SLAM3::SlamData* mpSLAMDATA;
+
     queue<sensor_msgs::ImageConstPtr> imgLeftBuf, imgRightBuf;
     std::mutex mBufMutexLeft,mBufMutexRight;
    
     ORB_SLAM3::System* mpSLAM;
+    ORB_SLAM3::SlamData* mpSLAMDATA;
     ImuGrabber *mpImuGb;
 
     const bool do_rectify;
@@ -85,7 +85,6 @@ int main(int argc, char **argv)
     ros::shutdown();
     return 1;
   }
-
   std::string sbRect(argv[3]);
   if(argc==5)
   {
@@ -98,8 +97,9 @@ int main(int argc, char **argv)
   ORB_SLAM3::System SLAM(argv[1],argv[2],ORB_SLAM3::System::IMU_STEREO,true);
 
   ImuGrabber imugb;
-  ORB_SLAM3::SlamData SLAMDATA(&SLAM, &n, 1);
-  ImageGrabber igb(&SLAM,&SLAMDATA,&imugb,sbRect == "true",bEqual);
+  //ORB_SLAM3::SlamData SLAMDATA(&SLAM, &n, 1);
+  //ImageGrabber igb(&SLAM,&imugb,sbRect == "true",bEqual, &SLAMDATA);
+  ImageGrabber igb(&SLAM,&imugb,sbRect == "true",bEqual);
   
     if(igb.do_rectify)
     {      
@@ -198,9 +198,11 @@ cv::Mat ImageGrabber::GetImage(const sensor_msgs::ImageConstPtr &img_msg)
 
 void ImageGrabber::SyncWithImu()
 {
+  
   const double maxTimeDiff = 0.01;
   while(1)
   {
+    //mpSLAMDATA->SaveTimePoint(ORB_SLAM3::SlamData::TimePointIndex::TIME_BEGIN);
     cv::Mat imLeft, imRight;
     double tImLeft = 0, tImRight = 0;
     if (!imgLeftBuf.empty()&&!imgRightBuf.empty()&&!mpImuGb->imuBuf.empty())
@@ -269,8 +271,34 @@ void ImageGrabber::SyncWithImu()
         cv::remap(imLeft,imLeft,M1l,M2l,cv::INTER_LINEAR);
         cv::remap(imRight,imRight,M1r,M2r,cv::INTER_LINEAR);
       }
+      //mpSLAMDATA->SaveTimePoint(ORB_SLAM3::SlamData::TimePointIndex::TIME_FINISH_CV_PROCESS);
+      cv::Mat Tcw = ORB_SLAM3::Converter::toCvMat(ORB_SLAM3::Converter::toSE3Quat(mpSLAM->TrackStereo(imLeft,imRight,tImLeft,vImuMeas)));
+      //mpSLAMDATA->SaveTimePoint(ORB_SLAM3::SlamData::TimePointIndex::TIME_FINISH_SLAM_PROCESS);
 
-      mpSLAM->TrackStereo(imLeft,imRight,tImLeft,vImuMeas);
+    //mpSLAMDATA->CalculateAndPrintOutProcessingFrequency();
+
+    // if (Tcw.empty()) {
+    //     ROS_INFO("TCW is empty\n"); 
+    //     cerr << "TCW is empty" << endl;
+    //   return;
+    // }
+    // cv_bridge::CvImageConstPtr cv_ptr;
+    // try
+    // {
+    //   cv_ptr = cv_bridge::toCvShare(imgLeftBuf.front(), sensor_msgs::image_encodings::MONO8);
+    // }
+    // catch (cv_bridge::Exception& e)
+    // {
+    //   ROS_ERROR("cv_bridge exception: %s", e.what());
+    // }
+    // ROS_INFO("Publishing Topic\n");
+    // mpSLAMDATA->PublishTFForROS(Tcw, cv_ptr);
+
+    // mpSLAMDATA->PublishPoseForROS(cv_ptr);
+
+    // mpSLAMDATA->PublishPointCloudForROS();
+
+    // mpSLAMDATA->PublishCurrentFrameForROS();
 
       std::chrono::milliseconds tSleep(1);
       std::this_thread::sleep_for(tSleep);
