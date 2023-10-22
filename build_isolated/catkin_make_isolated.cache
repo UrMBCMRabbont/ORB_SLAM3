@@ -1,0 +1,2 @@
+
+-G Unix Makefiles -DCATKIN_DEVEL_PREFIX=/home/linuxlaitang/ORB_SLAM3/devel_isolated -DCMAKE_INSTALL_PREFIX=/home/linuxlaitang/ORB_SLAM3/install_isolated

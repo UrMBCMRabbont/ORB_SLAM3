@@ -29,7 +29,7 @@
 #include <message_filters/sync_policies/approximate_time.h>
 
 #include<opencv2/core/core.hpp>
-
+#include "SlamData.h"
 #include"../../../include/System.h"
 
 using namespace std;
@@ -37,34 +37,41 @@ using namespace std;
 class ImageGrabber
 {
 public:
-    ImageGrabber(ORB_SLAM3::System* pSLAM):mpSLAM(pSLAM){}
+    ImageGrabber(ORB_SLAM3::System* pSLAM, ORB_SLAM3::SlamData* pSLAMDATA)
+    {
+        mpSLAM = pSLAM;
+        mpSLAMDATA = pSLAMDATA;
+    }
 
     void GrabRGBD(const sensor_msgs::ImageConstPtr& msgRGB,const sensor_msgs::ImageConstPtr& msgD);
 
     ORB_SLAM3::System* mpSLAM;
+    ORB_SLAM3::SlamData* mpSLAMDATA;
 };
 
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "RGBD");
     ros::start();
+     bool bEnablePublishROSTopic;
 
+   
     if(argc != 3)
     {
         cerr << endl << "Usage: rosrun ORB_SLAM3 RGBD path_to_vocabulary path_to_settings" << endl;        
         ros::shutdown();
         return 1;
     }    
-
+    bEnablePublishROSTopic = true;
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
     ORB_SLAM3::System SLAM(argv[1],argv[2],ORB_SLAM3::System::RGBD,true);
-
-    ImageGrabber igb(&SLAM);
-
     ros::NodeHandle nh;
+    ORB_SLAM3::SlamData SLAMDATA(&SLAM, &nh, bEnablePublishROSTopic);
 
-    message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/rgb/image_raw", 100);
-    message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "camera/depth_registered/image_raw", 100);
+    ImageGrabber igb(&SLAM, &SLAMDATA);  
+
+    message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/color/image_raw", 100);
+    message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "/camera/depth/image_rect_raw", 100);
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> sync_pol;
     message_filters::Synchronizer<sync_pol> sync(sync_pol(10), rgb_sub,depth_sub);
     sync.registerCallback(boost::bind(&ImageGrabber::GrabRGBD,&igb,_1,_2));
@@ -84,6 +91,9 @@ int main(int argc, char **argv)
 
 void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr& msgRGB,const sensor_msgs::ImageConstPtr& msgD)
 {
+    // Saves 3 points of time to calculate fps: begin, finish cv process and finish SLAM process
+    mpSLAMDATA->SaveTimePoint(ORB_SLAM3::SlamData::TimePointIndex::TIME_BEGIN);
+   
     // Copy the ros image message to cv::Mat.
     cv_bridge::CvImageConstPtr cv_ptrRGB;
     try
@@ -106,7 +116,26 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr& msgRGB,const senso
         ROS_ERROR("cv_bridge exception: %s", e.what());
         return;
     }
-    mpSLAM->TrackRGBD(cv_ptrRGB->image,cv_ptrD->image,cv_ptrRGB->header.stamp.toSec());
+    mpSLAMDATA->SaveTimePoint(ORB_SLAM3::SlamData::TimePointIndex::TIME_FINISH_CV_PROCESS);
+    cv::Mat Tcw = ORB_SLAM3::Converter::toCvMat(ORB_SLAM3::Converter::toSE3Quat(mpSLAM->TrackRGBD(cv_ptrRGB->image,cv_ptrD->image,cv_ptrRGB->header.stamp.toSec())));
+    mpSLAMDATA->SaveTimePoint(ORB_SLAM3::SlamData::TimePointIndex::TIME_FINISH_SLAM_PROCESS);
+
+    mpSLAMDATA->CalculateAndPrintOutProcessingFrequency();
+
+    if (Tcw.empty()) {
+      return;
+    }
+    if (mpSLAMDATA->EnablePublishROSTopics())
+    {
+
+        mpSLAMDATA->PublishTFForROS(Tcw, cv_ptrRGB);
+
+        mpSLAMDATA->PublishPoseForROS(cv_ptrRGB);
+
+        mpSLAMDATA->PublishPointCloudForROS();
+
+        mpSLAMDATA->PublishCurrentFrameForROS();
+    }
 }
 
 

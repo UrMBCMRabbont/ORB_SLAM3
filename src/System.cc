@@ -658,7 +658,14 @@ void System::SaveKeyFrameTrajectoryTUM(const string &filename)
 
     f.close();
 }
-
+const vector<MapPoint*> System::GetmpMapAllMapPoints(void)
+{ 
+    return mpAtlas->GetAllMapPoints();
+}
+const vector<MapPoint*> System::GetmpMapReferenceMapPoints(void)
+{
+    return mpAtlas->GetReferenceMapPoints();
+}
 void System::SaveTrajectoryEuRoC(const string &filename)
 {
 
@@ -774,6 +781,9 @@ void System::SaveTrajectoryEuRoC(const string &filename)
     //cout << "end saving trajectory" << endl;
     f.close();
     cout << endl << "End of saving trajectory to " << filename << " ..." << endl;
+}
+FrameDrawer* System::GetmpFrameDrawer(){
+    return mpFrameDrawer;
 }
 
 void System::SaveTrajectoryEuRoC(const string &filename, Map* pMap)

@@ -204,7 +204,8 @@ void Viewer::Run()
     Twc.SetIdentity();
     pangolin::OpenGlMatrix Ow; // Oriented with g in the z axis
     Ow.SetIdentity();
-    cv::namedWindow("ORB-SLAM3: Current Frame");
+    // cv::namedWindow("ORB-SLAM3: Current Frame");
+    cv::namedWindow("Amber is not on9");
 
     bool bFollow = true;
     bool bLocalizationMode = false;
@@ -335,7 +336,7 @@ void Viewer::Run()
             cv::resize(toShow, toShow, cv::Size(width, height));
         }
 
-        cv::imshow("ORB-SLAM3: Current Frame",toShow);
+        cv::imshow("Amber is not on9",toShow);
         cv::waitKey(mT);
 
         if(menuReset)
