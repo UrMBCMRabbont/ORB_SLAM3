@@ -198,9 +198,12 @@ cv::Mat ImageGrabber::GetImage(const sensor_msgs::ImageConstPtr &img_msg)
 
 void ImageGrabber::SyncWithImu()
 {
+  ros::NodeHandle nh;
+  const ros::Publisher pub = nh.advertise<geometry_msgs::PoseStamped>("position_feedback", 1000);
   const double maxTimeDiff = 0.01;
   while(1)
   {
+    mpSLAMDATA->SaveTimePoint(ORB_SLAM3::SlamData::TimePointIndex::TIME_BEGIN);
     cv::Mat imLeft, imRight;
     double tImLeft = 0, tImRight = 0;
     if (!imgLeftBuf.empty()&&!imgRightBuf.empty()&&!mpImuGb->imuBuf.empty())
@@ -269,9 +272,25 @@ void ImageGrabber::SyncWithImu()
         cv::remap(imLeft,imLeft,M1l,M2l,cv::INTER_LINEAR);
         cv::remap(imRight,imRight,M1r,M2r,cv::INTER_LINEAR);
       }
+      
+      mpSLAMDATA->SaveTimePoint(ORB_SLAM3::SlamData::TimePointIndex::TIME_FINISH_CV_PROCESS);
+      cv::Mat Tcw = mpSLAM->TrackStereo_cv(imLeft,imRight,tImLeft,vImuMeas);
+      mpSLAMDATA->SaveTimePoint(ORB_SLAM3::SlamData::TimePointIndex::TIME_FINISH_SLAM_PROCESS);
+      mpSLAMDATA->CalculateAndPrintOutProcessingFrequency();
+      if (Tcw.empty()) {
+        ROS_INFO("TCW is empty\n"); 
+        cerr << "TCW is empty" << endl;
+      return;
+    }
+    ROS_INFO("Topic publishing: %f\n", tImLeft);
+    mpSLAMDATA->PublishTFForROS(Tcw, ros::Time::now().toSec());
 
-      mpSLAM->TrackStereo(imLeft,imRight,tImLeft,vImuMeas);
-
+      static int frame_num = 0;
+      geometry_msgs::PoseStamped pose;
+      pose.header.stamp = ros::Time(tImLeft);
+      pose.header.frame_id ="world";
+      tf::poseTFToMsg(mpSLAMDATA->getTrans(), pose.pose);
+      pub.publish(pose);
       std::chrono::milliseconds tSleep(1);
       std::this_thread::sleep_for(tSleep);
     }

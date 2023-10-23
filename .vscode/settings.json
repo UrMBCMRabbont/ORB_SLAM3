@@ -9,6 +9,12 @@
         "hash_set": "cpp",
         "deque": "cpp",
         "list": "cpp",
-        "vector": "cpp"
+        "vector": "cpp",
+        "chrono": "cpp",
+        "unordered_map": "cpp",
+        "unordered_set": "cpp",
+        "mutex": "cpp",
+        "shared_mutex": "cpp",
+        "condition_variable": "cpp"
     }
 }

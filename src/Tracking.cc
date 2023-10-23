@@ -1516,6 +1516,70 @@ Sophus::SE3f Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat 
     return mCurrentFrame.GetPose();
 }
 
+cv::Mat Tracking::GrabImageStereo_cv(const cv::Mat &imRectLeft, const cv::Mat &imRectRight, const double &timestamp, string filename)
+{
+    //cout << "GrabImageStereo" << endl;
+
+    mImGray = imRectLeft;
+    cv::Mat imGrayRight = imRectRight;
+    mImRight = imRectRight;
+
+    if(mImGray.channels()==3)
+    {
+        //cout << "Image with 3 channels" << endl;
+        if(mbRGB)
+        {
+            cvtColor(mImGray,mImGray,cv::COLOR_RGB2GRAY);
+            cvtColor(imGrayRight,imGrayRight,cv::COLOR_RGB2GRAY);
+        }
+        else
+        {
+            cvtColor(mImGray,mImGray,cv::COLOR_BGR2GRAY);
+            cvtColor(imGrayRight,imGrayRight,cv::COLOR_BGR2GRAY);
+        }
+    }
+    else if(mImGray.channels()==4)
+    {
+        //cout << "Image with 4 channels" << endl;
+        if(mbRGB)
+        {
+            cvtColor(mImGray,mImGray,cv::COLOR_RGBA2GRAY);
+            cvtColor(imGrayRight,imGrayRight,cv::COLOR_RGBA2GRAY);
+        }
+        else
+        {
+            cvtColor(mImGray,mImGray,cv::COLOR_BGRA2GRAY);
+            cvtColor(imGrayRight,imGrayRight,cv::COLOR_BGRA2GRAY);
+        }
+    }
+
+    //cout << "Incoming frame creation" << endl;
+
+    if (mSensor == System::STEREO && !mpCamera2)
+        mCurrentFrame = Frame(mImGray,imGrayRight,timestamp,mpORBextractorLeft,mpORBextractorRight,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth,mpCamera);
+    else if(mSensor == System::STEREO && mpCamera2)
+        mCurrentFrame = Frame(mImGray,imGrayRight,timestamp,mpORBextractorLeft,mpORBextractorRight,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth,mpCamera,mpCamera2,mTlr);
+    else if(mSensor == System::IMU_STEREO && !mpCamera2)
+        mCurrentFrame = Frame(mImGray,imGrayRight,timestamp,mpORBextractorLeft,mpORBextractorRight,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth,mpCamera,&mLastFrame,*mpImuCalib);
+    else if(mSensor == System::IMU_STEREO && mpCamera2)
+        mCurrentFrame = Frame(mImGray,imGrayRight,timestamp,mpORBextractorLeft,mpORBextractorRight,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth,mpCamera,mpCamera2,mTlr,&mLastFrame,*mpImuCalib);
+
+    //cout << "Incoming frame ended" << endl;
+
+    mCurrentFrame.mNameFile = filename;
+    mCurrentFrame.mnDataset = mnNumDataset;
+
+#ifdef REGISTER_TIMES
+    vdORBExtract_ms.push_back(mCurrentFrame.mTimeORB_Ext);
+    vdStereoMatch_ms.push_back(mCurrentFrame.mTimeStereoMatch);
+#endif
+
+    //cout << "Tracking start" << endl;
+    Track();
+    //cout << "Tracking end" << endl;
+
+    return ORB_SLAM3::Converter::toCvMat(ORB_SLAM3::Converter::toSE3Quat(mCurrentFrame.GetPose()));
+}
 
 Sophus::SE3f Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp, string filename)
 {
