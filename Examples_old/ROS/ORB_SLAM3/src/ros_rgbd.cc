@@ -128,9 +128,9 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr& msgRGB,const senso
     if (mpSLAMDATA->EnablePublishROSTopics())
     {
 
-        mpSLAMDATA->PublishTFForROS(Tcw, cv_ptrRGB);
+        mpSLAMDATA->PublishTFForROS(Tcw, cv_ptrRGB->header.stamp.toSec());
 
-        mpSLAMDATA->PublishPoseForROS(cv_ptrRGB);
+        mpSLAMDATA->PublishPoseForROS(cv_ptrRGB->header.stamp);
 
         mpSLAMDATA->PublishPointCloudForROS();
 
