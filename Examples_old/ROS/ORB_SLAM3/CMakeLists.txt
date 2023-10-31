@@ -33,13 +33,9 @@ endif()
 
 LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../../../cmake_modules)
 
-find_package(OpenCV 4.2.0 REQUIRED)
-#find_package(OpenCV 3.0 QUIET)
-if(NOT OpenCV_FOUND)
-   find_package(OpenCV 2.4.3 QUIET)
-   if(NOT OpenCV_FOUND)
-      message(FATAL_ERROR "OpenCV > 2.4.3 not found.")
-   endif()
+find_package(OpenCV 4.2 QUIET) 
+if(NOT OpenCV_FOUND) 
+message(FATAL_ERROR "OpenCV > 4.2 not found.") 
 endif()
 
 find_package(Eigen3 REQUIRED)
@@ -124,6 +120,7 @@ ${LIBS}
 # Node for stereo-inertial camera
 rosbuild_add_executable(Stereo_Inertial
 src/ros_stereo_inertial.cc
+lib/SlamData.cc
 )
 
 target_link_libraries(Stereo_Inertial

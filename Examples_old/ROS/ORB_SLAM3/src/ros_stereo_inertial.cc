@@ -24,7 +24,7 @@
 #include<queue>
 #include<thread>
 #include<mutex>
-
+#include"SlamData.h"
 #include<ros/ros.h>
 #include<cv_bridge/cv_bridge.h>
 #include<sensor_msgs/Imu.h>
@@ -49,7 +49,7 @@ public:
 class ImageGrabber
 {
 public:
-    ImageGrabber(ORB_SLAM3::System* pSLAM, ImuGrabber *pImuGb, const bool bRect, const bool bClahe): mpSLAM(pSLAM), mpImuGb(pImuGb), do_rectify(bRect), mbClahe(bClahe){}
+    ImageGrabber(ORB_SLAM3::System* pSLAM, ORB_SLAM3::SlamData* pSLAMDATA, ImuGrabber *pImuGb, const bool bRect, const bool bClahe): mpSLAM(pSLAM), mpSLAMDATA(pSLAMDATA), mpImuGb(pImuGb), do_rectify(bRect), mbClahe(bClahe){}
 
     void GrabImageLeft(const sensor_msgs::ImageConstPtr& msg);
     void GrabImageRight(const sensor_msgs::ImageConstPtr& msg);
@@ -60,6 +60,7 @@ public:
     std::mutex mBufMutexLeft,mBufMutexRight;
    
     ORB_SLAM3::System* mpSLAM;
+    ORB_SLAM3::SlamData* mpSLAMDATA;
     ImuGrabber *mpImuGb;
 
     const bool do_rectify;
@@ -94,9 +95,9 @@ int main(int argc, char **argv)
 
   // Create SLAM system. It initializes all system threads and gets ready to process frames.
   ORB_SLAM3::System SLAM(argv[1],argv[2],ORB_SLAM3::System::IMU_STEREO,true);
-
+  ORB_SLAM3::SlamData SLAMDATA(&SLAM, &n, 1);
   ImuGrabber imugb;
-  ImageGrabber igb(&SLAM,&imugb,sbRect == "true",bEqual);
+  ImageGrabber igb(&SLAM,&SLAMDATA,&imugb,sbRect == "true",bEqual);
   
     if(igb.do_rectify)
     {      
@@ -196,6 +197,8 @@ cv::Mat ImageGrabber::GetImage(const sensor_msgs::ImageConstPtr &img_msg)
 void ImageGrabber::SyncWithImu()
 {
   const double maxTimeDiff = 0.01;
+  ros::NodeHandle nh;
+  const ros::Publisher pub = nh.advertise<geometry_msgs::PoseStamped>("position_feedback", 1000);
   while(1)
   {
     cv::Mat imLeft, imRight;
@@ -267,8 +270,23 @@ void ImageGrabber::SyncWithImu()
         cv::remap(imRight,imRight,M1r,M2r,cv::INTER_LINEAR);
       }
 
+      cv::Mat Tcw;
+      // cv::Mat Tcw = ORB_SLAM3::Converter::toCvMat(ORB_SLAM3::Converter::toSE3Quat(mpSLAM->TrackStereo(imLeft,imRight,tImLeft,vImuMeas)));
       mpSLAM->TrackStereo(imLeft,imRight,tImLeft,vImuMeas);
+      // if (Tcw.empty()) {
+      //   ROS_INFO("TCW is empty\n"); 
+      //   cerr << "TCW is empty" << endl;
+      //   return;
+      // }
+      // ROS_INFO("Topic publishing: %f\n", tImLeft);
+      // mpSLAMDATA->PublishTFForROS(Tcw, ros::Time::now().toSec());
 
+      // static int frame_num = 0;
+      // geometry_msgs::PoseStamped pose;
+      // pose.header.stamp = ros::Time(tImLeft);
+      // pose.header.frame_id ="world";
+      // tf::poseTFToMsg(mpSLAMDATA->getTrans(), pose.pose);
+      // pub.publish(pose);
       std::chrono::milliseconds tSleep(1);
       std::this_thread::sleep_for(tSleep);
     }
