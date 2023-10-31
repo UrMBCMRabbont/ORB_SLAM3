@@ -200,6 +200,7 @@ void ImageGrabber::SyncWithImu()
 {
   ros::NodeHandle nh;
   const ros::Publisher pub = nh.advertise<geometry_msgs::PoseStamped>("position_feedback", 1000);
+  const ros::Publisher pub_inc = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("incremental_pose_cov", 1000);
   const double maxTimeDiff = 0.01;
   while(1)
   {
@@ -280,10 +281,10 @@ void ImageGrabber::SyncWithImu()
       if (Tcw.empty()) {
         ROS_INFO("TCW is empty\n"); 
         cerr << "TCW is empty" << endl;
-      return;
-    }
-    ROS_INFO("Topic publishing: %f\n", tImLeft);
-    mpSLAMDATA->PublishTFForROS(Tcw, ros::Time::now().toSec());
+        return;
+      }
+      ROS_INFO("Topic publishing: %f\n", tImLeft);
+      mpSLAMDATA->PublishTFForROS(Tcw, ros::Time::now().toSec());
 
       static int frame_num = 0;
       geometry_msgs::PoseStamped pose;
@@ -291,6 +292,24 @@ void ImageGrabber::SyncWithImu()
       pose.header.frame_id ="world";
       tf::poseTFToMsg(mpSLAMDATA->getTrans(), pose.pose);
       pub.publish(pose);
+      // geometry_msgs::PoseWithCovarianceStamped pose_inc_cov;
+      // pose_inc_cov.header.stamp = ros::Time(tImLeft);
+      // pose_inc_cov.header.frame_id = "keyframe_" + to_string(frame_num++);
+      // tf::poseTFToMsg(mpSLAMDATA->getLastTrans().inverse()*mpSLAMDATA->getTrans(), pose_inc_cov.pose.pose);
+      // pose_inc_cov.pose.covariance[0*7] = 0.0005;
+      // pose_inc_cov.pose.covariance[1*7] = 0.0005;
+      // pose_inc_cov.pose.covariance[2*7] = 0.0005;
+      // pose_inc_cov.pose.covariance[3*7] = 0.0001;
+      // pose_inc_cov.pose.covariance[4*7] = 0.0001;
+      // pose_inc_cov.pose.covariance[5*7] = 0.0001;
+
+      // pub_inc.publish(pose_inc_cov);
+
+      //mpSLAMDATA->updateLastTrans();
+
+
+
+
       std::chrono::milliseconds tSleep(1);
       std::this_thread::sleep_for(tSleep);
     }
