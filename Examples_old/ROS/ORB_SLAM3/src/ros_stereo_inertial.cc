@@ -98,7 +98,7 @@ int main(int argc, char **argv)
   ORB_SLAM3::System SLAM(argv[1],argv[2],ORB_SLAM3::System::IMU_STEREO,true);
 
   ImuGrabber imugb;
-  ORB_SLAM3::SlamData SLAMDATA(&SLAM, &n, 1);
+  ORB_SLAM3::SlamData SLAMDATA(&SLAM, &n, true);
   ImageGrabber igb(&SLAM,&SLAMDATA,&imugb,sbRect == "true",bEqual);
   
     if(igb.do_rectify)
@@ -283,36 +283,18 @@ void ImageGrabber::SyncWithImu()
       mpSLAMDATA->CalculateAndPrintOutProcessingFrequency();
       if (Tcw.empty()) {
         ROS_INFO("TCW is empty\n"); 
-        cerr << "TCW is empty" << endl;
         return;
       }
       ROS_INFO("Topic publishing: %f\n", tImLeft);
-      mpSLAMDATA->PublishTFForROS(Tcw, ros::Time::now().toSec());
-
-      static int frame_num = 0;
-      geometry_msgs::PoseStamped pose;
-      pose.header.stamp = ros::Time(tImLeft);
-      pose.header.frame_id ="world";
-      tf::poseTFToMsg(mpSLAMDATA->getTrans(), pose.pose);
-      
-      pub.publish(pose);
-      // geometry_msgs::PoseWithCovarianceStamped pose_inc_cov;
-      // pose_inc_cov.header.stamp = ros::Time(tImLeft);
-      // pose_inc_cov.header.frame_id = "keyframe_" + to_string(frame_num++);
-      // tf::poseTFToMsg(mpSLAMDATA->getLastTrans().inverse()*mpSLAMDATA->getTrans(), pose_inc_cov.pose.pose);
-      // pose_inc_cov.pose.covariance[0*7] = 0.0005;
-      // pose_inc_cov.pose.covariance[1*7] = 0.0005;
-      // pose_inc_cov.pose.covariance[2*7] = 0.0005;
-      // pose_inc_cov.pose.covariance[3*7] = 0.0001;
-      // pose_inc_cov.pose.covariance[4*7] = 0.0001;
-      // pose_inc_cov.pose.covariance[5*7] = 0.0001;
-
-      // pub_inc.publish(pose_inc_cov);
-
-      //mpSLAMDATA->updateLastTrans();
 
 
-
+      if (mpSLAMDATA->EnablePublishROSTopics())
+      {
+          mpSLAMDATA->PublishTFForROS(Tcw, ros::Time::now().toSec());
+          mpSLAMDATA->PublishPoseForROS(ros::Time::now());
+          mpSLAMDATA->PublishPointCloudForROS();
+          mpSLAMDATA->PublishCurrentFrameForROS();
+      }
 
       std::chrono::milliseconds tSleep(1);
       std::this_thread::sleep_for(tSleep);
