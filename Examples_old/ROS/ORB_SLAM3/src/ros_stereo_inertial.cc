@@ -144,6 +144,9 @@ int main(int argc, char **argv)
   ros::Subscriber sub_imu = n.subscribe("/camera/imu", 1000, &ImuGrabber::GrabImu, &imugb); 
   ros::Subscriber sub_img_left = n.subscribe("/camera/infra1/image_rect_raw", 100, &ImageGrabber::GrabImageLeft,&igb);
   ros::Subscriber sub_img_right = n.subscribe("/camera/infra2/image_rect_raw", 100, &ImageGrabber::GrabImageRight,&igb);
+  // ros::Subscriber sub_imu = n.subscribe("/imu0", 1000, &ImuGrabber::GrabImu, &imugb); 
+  // ros::Subscriber sub_img_left = n.subscribe("/cam0/image_raw", 100, &ImageGrabber::GrabImageLeft,&igb);
+  // ros::Subscriber sub_img_right = n.subscribe("/cam1/image_raw", 100, &ImageGrabber::GrabImageRight,&igb);
 
   std::thread sync_thread(&ImageGrabber::SyncWithImu,&igb);
 
@@ -199,7 +202,7 @@ cv::Mat ImageGrabber::GetImage(const sensor_msgs::ImageConstPtr &img_msg)
 void ImageGrabber::SyncWithImu()
 {
   ros::NodeHandle nh;
-  const ros::Publisher pub = nh.advertise<geometry_msgs::PoseStamped>("position_feedback", 1000);
+  const ros::Publisher pub = nh.advertise<geometry_msgs::PoseStamped>("/ORB_pose", 1000);
   const ros::Publisher pub_inc = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("incremental_pose_cov", 1000);
   const double maxTimeDiff = 0.01;
   while(1)
@@ -291,6 +294,7 @@ void ImageGrabber::SyncWithImu()
       pose.header.stamp = ros::Time(tImLeft);
       pose.header.frame_id ="world";
       tf::poseTFToMsg(mpSLAMDATA->getTrans(), pose.pose);
+      
       pub.publish(pose);
       // geometry_msgs::PoseWithCovarianceStamped pose_inc_cov;
       // pose_inc_cov.header.stamp = ros::Time(tImLeft);
